@@ -1,6 +1,22 @@
 // esbuild.config.js
 import esbuild from 'esbuild';
 
+/** Replace an unresolvable dependency with a source stub. */
+function stubModule(moduleName, source) {
+  const namespace = `stub-${moduleName}`;
+  return {
+    name: namespace,
+    setup(build) {
+      const filter = new RegExp(`^${moduleName}$`);
+      build.onResolve({ filter }, (args) => ({ path: args.path, namespace }));
+      build.onLoad({ filter: /.*/, namespace }, () => ({
+        contents: source,
+        loader: 'js',
+      }));
+    },
+  };
+}
+
 await esbuild.build({
   entryPoints: ['packages/cli/src/index.ts'],
   outfile: 'dist/cli.js',
@@ -10,6 +26,11 @@ await esbuild.build({
   target: 'node22',
   // The Ink UI uses JSX; compile it with React's automatic runtime.
   jsx: 'automatic',
+  // Ink's devtools module statically imports react-devtools-core, an optional
+  // peer dependency we never install. Marking it external is not enough: the
+  // import gets hoisted to the top of the bundle and fails at startup, so
+  // resolve it to a stub instead.
+  plugins: [stubModule('react-devtools-core', 'export default {};')],
   sourcemap: true,
   banner: {
     js: [
