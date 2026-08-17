@@ -1,8 +1,13 @@
 // packages/core/src/agent/agent.ts
-import type { Message, ModelProvider, ToolCallRequest } from '../provider/types.js';
+import type {
+  Message,
+  ModelProvider,
+  ToolCallRequest,
+} from '../provider/types.js';
 import { buildSystemPrompt } from '../prompts.js';
 import { PermissionManager } from '../permissions/manager.js';
 import type { ConfirmationRequest, ConfirmFn } from '../permissions/types.js';
+import { compressHistory, estimateTokens } from '../session/compress.js';
 import type { ToolRegistry } from '../tools/registry.js';
 import type { Tool, ToolResult } from '../tools/types.js';
 import type { AgentEvent } from './events.js';
@@ -17,19 +22,26 @@ export interface AgentOptions {
   permissions?: PermissionManager;
   /** Injected by the frontend. If absent while permissions require it, calls are denied. */
   confirm?: ConfirmFn;
+  /** Durable memory text, embedded in the system prompt. */
+  memory?: string;
+  /** Called for every message appended to history (session persistence). */
+  onMessage?: (message: Message) => void;
+  /** Compress when the estimated token count exceeds this. */
+  compressThreshold?: number;
 }
 
 export class Agent {
   readonly history: Message[] = [];
   readonly permissions: PermissionManager;
-  private opts: Required<Pick<AgentOptions, 'maxTurns'>> & AgentOptions;
+  private opts: Required<Pick<AgentOptions, 'maxTurns' | 'compressThreshold'>> &
+    AgentOptions;
 
   constructor(options: AgentOptions) {
-    this.opts = { maxTurns: 20, ...options };
+    this.opts = { maxTurns: 20, compressThreshold: 60_000, ...options };
     this.permissions = options.permissions ?? new PermissionManager('ask');
     this.history.push({
       role: 'system',
-      content: buildSystemPrompt(options.cwd),
+      content: buildSystemPrompt(options.cwd, options.memory),
     });
   }
 
@@ -46,9 +58,47 @@ export class Agent {
     this.opts.model = model;
   }
 
+  /** Restore a previous session's messages (skips its old system prompt). */
+  loadHistory(messages: Message[]): void {
+    for (const m of messages) {
+      if (m.role === 'system') continue; // fresh system prompt already in place
+      this.history.push(m);
+    }
+  }
+
+  private push(message: Message): void {
+    this.history.push(message);
+    this.opts.onMessage?.(message);
+  }
+
   /** Run one user input to completion, streaming events. */
   async *run(userInput: string): AsyncGenerator<AgentEvent> {
-    this.history.push({ role: 'user', content: userInput });
+    // Compress BEFORE adding the new input, if we've grown too large.
+    if (estimateTokens(this.history) > this.opts.compressThreshold) {
+      yield { type: 'info', message: 'compressing conversation history…' };
+      try {
+        const compressed = await compressHistory(
+          this.opts.provider,
+          this.opts.model,
+          this.history,
+        );
+        this.history.length = 0;
+        this.history.push(...compressed);
+        yield {
+          type: 'info',
+          message: `history compressed to ~${estimateTokens(this.history)} tokens`,
+        };
+      } catch (err) {
+        yield {
+          type: 'info',
+          message: `compression failed (continuing uncompressed): ${
+            err instanceof Error ? err.message : err
+          }`,
+        };
+      }
+    }
+
+    this.push({ role: 'user', content: userInput });
 
     for (let turn = 0; turn < this.opts.maxTurns; turn++) {
       let assistantText = '';
@@ -75,7 +125,7 @@ export class Agent {
         return;
       }
 
-      this.history.push({
+      this.push({
         role: 'assistant',
         content: assistantText,
         ...(toolCalls.length > 0 ? { toolCalls } : {}),
@@ -90,7 +140,7 @@ export class Agent {
         yield { type: 'tool_start', call };
         const result = await this.executeCall(call);
         yield { type: 'tool_end', call, result };
-        this.history.push({
+        this.push({
           role: 'tool',
           toolCallId: call.id,
           content: result.llmContent,
@@ -126,7 +176,6 @@ export class Agent {
       };
     }
 
-    // ---- permission gate -------------------------------------------------
     if (this.permissions.shouldConfirm(tool)) {
       const outcome = await this.requestConfirmation(tool, args);
       if (outcome === 'no') {
@@ -141,7 +190,6 @@ export class Agent {
         this.permissions.allowAlways(tool.name);
       }
     }
-    // ----------------------------------------------------------------------
 
     try {
       return await tool.execute(args, { cwd: this.opts.cwd });
@@ -159,7 +207,7 @@ export class Agent {
     tool: Tool,
     args: Record<string, unknown>,
   ): Promise<'yes' | 'yes-always' | 'no'> {
-    if (!this.opts.confirm) return 'no'; // no UI to ask -> fail safe
+    if (!this.opts.confirm) return 'no';
 
     const req: ConfirmationRequest = {
       tool: tool.name,
@@ -181,6 +229,6 @@ export class Agent {
 }
 
 function summarize(name: string, args: Record<string, unknown>): string {
-  const target = args['path'] ?? args['command'] ?? '';
+  const target = args['path'] ?? args['command'] ?? args['fact'] ?? '';
   return `${name} ${String(target)}`.trim();
 }

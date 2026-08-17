@@ -7,6 +7,7 @@ export interface CliArgs {
   model?: string;
   provider?: string;
   approvalMode: ApprovalMode;
+  resume?: string;
 }
 
 export async function parseArgs(): Promise<CliArgs> {
@@ -30,6 +31,10 @@ export async function parseArgs(): Promise<CliArgs> {
       default: false,
       describe: 'Shorthand for --approval-mode yolo',
     })
+    .option('resume', {
+      type: 'string',
+      describe: 'Resume a session: --resume <id> or --resume latest',
+    })
     .help()
     .parse();
 
@@ -37,5 +42,6 @@ export async function parseArgs(): Promise<CliArgs> {
     model: argv.model,
     provider: argv.provider,
     approvalMode: argv.yolo ? 'yolo' : (argv['approval-mode'] as ApprovalMode),
+    resume: argv.resume,
   };
 }

@@ -2,7 +2,12 @@
 import { useCallback, useRef } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import Spinner from 'ink-spinner';
-import { VERSION, type Config } from '@minicode/core';
+import {
+  VERSION,
+  type Config,
+  type Message,
+  type SessionStore,
+} from '@minicode/core';
 import { createCommandRegistry, type CommandContext } from '../commands/index.js';
 import { expandAtFiles } from '../input/atFile.js';
 import { completeAtToken } from '../input/completion.js';
@@ -12,9 +17,29 @@ import { InputBox } from './components/InputBox.js';
 import { MessageList } from './components/MessageList.js';
 import { useAgentRunner } from './hooks/useAgentRunner.js';
 
-export function App({ config }: { config: Config }): React.JSX.Element {
+export interface AppProps {
+  config: Config;
+  memory: string;
+  store: SessionStore;
+  sessionId: string;
+  resumedMessages: Message[];
+}
+
+export function App({
+  config,
+  memory,
+  store,
+  sessionId,
+  resumedMessages,
+}: AppProps): React.JSX.Element {
   const { exit } = useApp();
-  const runner = useAgentRunner(config);
+  const runner = useAgentRunner(
+    config,
+    memory,
+    store,
+    sessionId,
+    resumedMessages,
+  );
   const commandsRef = useRef(createCommandRegistry());
   const lastShellOutput = useRef<string | null>(null);
 
@@ -39,6 +64,8 @@ export function App({ config }: { config: Config }): React.JSX.Element {
             agent: runner.agent,
             commands: commandsRef.current,
             config,
+            store,
+            sessionId,
             ui: { addInfo: runner.addInfo, clear: runner.clear, exit },
           };
           const result = await cmd.execute(args, ctx);
@@ -72,7 +99,7 @@ export function App({ config }: { config: Config }): React.JSX.Element {
         runner.submit(finalPrompt, value);
       })();
     },
-    [runner, exit, config.cwd],
+    [runner, exit, config, store, sessionId],
   );
 
   const complete = useCallback(

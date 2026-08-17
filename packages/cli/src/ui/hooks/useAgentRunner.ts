@@ -7,6 +7,8 @@ import {
   PermissionManager,
   type ConfirmationRequest,
   type ConfirmOutcome,
+  type Message,
+  type SessionStore,
 } from '@minicode/core';
 import { nextId, type UIMessage } from '../types.js';
 
@@ -21,8 +23,22 @@ export interface AgentRunner {
   clear(): void;
 }
 
-export function useAgentRunner(config: Config): AgentRunner {
-  const [messages, setMessages] = useState<UIMessage[]>([]);
+export function useAgentRunner(
+  config: Config,
+  memory: string,
+  store: SessionStore,
+  sessionId: string,
+  resumedMessages: Message[],
+): AgentRunner {
+  const [messages, setMessages] = useState<UIMessage[]>(() =>
+    resumedMessages
+      .filter((m) => m.role === 'user' || (m.role === 'assistant' && m.content))
+      .map((m) => ({
+        id: nextId(),
+        role: m.role as 'user' | 'assistant',
+        text: m.content,
+      })),
+  );
   const [running, setRunning] = useState(false);
   const [pendingConfirm, setPendingConfirm] =
     useState<ConfirmationRequest | null>(null);
@@ -32,12 +48,14 @@ export function useAgentRunner(config: Config): AgentRunner {
   const agentRef = useRef<Agent | null>(null);
   if (agentRef.current === null) {
     const { provider, model } = config.createProvider();
-    agentRef.current = new Agent({
+    const agent = new Agent({
       provider,
       model,
       tools: createDefaultRegistry(),
       cwd: config.cwd,
       permissions: new PermissionManager(config.approvalMode),
+      memory,
+      onMessage: (m) => void store.append(sessionId, m),
       // The ConfirmFn: park a promise, surface the request as state,
       // resolve when the dialog answers.
       confirm: (req) =>
@@ -46,6 +64,8 @@ export function useAgentRunner(config: Config): AgentRunner {
           setPendingConfirm(req);
         }),
     });
+    agent.loadHistory(resumedMessages);
+    agentRef.current = agent;
   }
 
   const respondConfirm = useCallback((outcome: ConfirmOutcome) => {
@@ -121,6 +141,13 @@ export function useAgentRunner(config: Config): AgentRunner {
                   : m,
               ),
             );
+            break;
+          }
+          case 'info': {
+            setMessages((prev) => [
+              ...prev,
+              { id: nextId(), role: 'info', text: event.message },
+            ]);
             break;
           }
           case 'error': {

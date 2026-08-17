@@ -6,6 +6,7 @@ import { grepTool } from './grep.js';
 import { listDirectoryTool } from './ls.js';
 import { readFileTool } from './read-file.js';
 import { runShellTool } from './shell.js';
+import { saveMemoryTool } from './save-memory.js';
 import { writeFileTool } from './write-file.js';
 
 export * from './types.js';
@@ -20,5 +21,6 @@ export function createDefaultRegistry(): ToolRegistry {
   registry.register(globTool);
   registry.register(grepTool);
   registry.register(runShellTool);
+  registry.register(saveMemoryTool);
   return registry;
 }

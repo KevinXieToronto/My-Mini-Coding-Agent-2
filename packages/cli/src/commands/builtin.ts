@@ -64,3 +64,29 @@ export const providerCommand: SlashCommand = {
     }
   },
 };
+
+export const resumeCommand: SlashCommand = {
+  name: 'resume',
+  description: 'List sessions for this project (restart with --resume <id>).',
+  async execute(_args, ctx) {
+    const sessions = await ctx.store.list();
+    if (sessions.length === 0) {
+      ctx.ui.addInfo('No saved sessions for this project yet.');
+      return;
+    }
+    const lines = sessions
+      .slice(0, 10)
+      .map(
+        (s) =>
+          `${s.id === ctx.sessionId ? '→' : ' '} ${s.id}  (${s.startedAt})`,
+      );
+    ctx.ui.addInfo(
+      [
+        'Sessions (newest first):',
+        ...lines,
+        '',
+        'Resume with: minicode --resume <id>',
+      ].join('\n'),
+    );
+  },
+};

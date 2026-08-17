@@ -7,5 +7,6 @@ export type AgentEvent =
   | { type: 'text'; text: string }
   | { type: 'tool_start'; call: ToolCallRequest }
   | { type: 'tool_end'; call: ToolCallRequest; result: ToolResult }
+  | { type: 'info'; message: string }
   | { type: 'turn_end' }
   | { type: 'error'; message: string };
