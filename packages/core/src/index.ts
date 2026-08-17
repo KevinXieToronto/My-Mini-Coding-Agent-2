@@ -22,3 +22,8 @@ export { SessionStore, projectSlug } from './session/store.js';
 export type { SessionMeta } from './session/store.js';
 export { compressHistory, estimateTokens } from './session/compress.js';
 export { loadMemory, appendMemory, MEMORY_FILENAME } from './memory/memory.js';
+
+export * from './subagents/definition.js';
+export { loadAgentDefinitions, parseFrontmatterDoc } from './subagents/loader.js';
+export { createSpawnAgentTool } from './subagents/spawn-tool.js';
+export type { SpawnAgentDeps } from './subagents/spawn-tool.js';

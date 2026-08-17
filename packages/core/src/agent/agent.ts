@@ -28,6 +28,8 @@ export interface AgentOptions {
   onMessage?: (message: Message) => void;
   /** Compress when the estimated token count exceeds this. */
   compressThreshold?: number;
+  /** Override the default system prompt (used by subagents). */
+  systemPrompt?: string;
 }
 
 export class Agent {
@@ -41,7 +43,9 @@ export class Agent {
     this.permissions = options.permissions ?? new PermissionManager('ask');
     this.history.push({
       role: 'system',
-      content: buildSystemPrompt(options.cwd, options.memory),
+      content:
+        options.systemPrompt ??
+        buildSystemPrompt(options.cwd, options.memory),
     });
   }
 

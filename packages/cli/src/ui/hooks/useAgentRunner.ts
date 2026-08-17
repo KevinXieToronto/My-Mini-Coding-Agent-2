@@ -4,7 +4,9 @@ import {
   Agent,
   Config,
   createDefaultRegistry,
+  createSpawnAgentTool,
   PermissionManager,
+  type AgentDefinition,
   type ConfirmationRequest,
   type ConfirmOutcome,
   type Message,
@@ -29,6 +31,7 @@ export function useAgentRunner(
   store: SessionStore,
   sessionId: string,
   resumedMessages: Message[],
+  definitions: Map<string, AgentDefinition>,
 ): AgentRunner {
   const [messages, setMessages] = useState<UIMessage[]>(() =>
     resumedMessages
@@ -48,10 +51,18 @@ export function useAgentRunner(
   const agentRef = useRef<Agent | null>(null);
   if (agentRef.current === null) {
     const { provider, model } = config.createProvider();
+    const tools = createDefaultRegistry();
+    tools.register(
+      createSpawnAgentTool({
+        providerFactory: () => config.createProvider(),
+        baseTools: tools,
+        definitions,
+      }),
+    );
     const agent = new Agent({
       provider,
       model,
-      tools: createDefaultRegistry(),
+      tools,
       cwd: config.cwd,
       permissions: new PermissionManager(config.approvalMode),
       memory,

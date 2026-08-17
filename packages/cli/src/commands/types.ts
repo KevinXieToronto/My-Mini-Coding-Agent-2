@@ -1,5 +1,10 @@
 // packages/cli/src/commands/types.ts
-import type { Agent, Config, SessionStore } from '@minicode/core';
+import type {
+  Agent,
+  AgentDefinition,
+  Config,
+  SessionStore,
+} from '@minicode/core';
 import type { CommandRegistry } from './registry.js';
 
 export interface CommandContext {
@@ -8,6 +13,7 @@ export interface CommandContext {
   config: Config;
   store: SessionStore;
   sessionId: string;
+  definitions: Map<string, AgentDefinition>;
   ui: {
     addInfo(text: string): void;
     clear(): void;

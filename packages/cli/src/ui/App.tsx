@@ -4,6 +4,7 @@ import { Box, Text, useApp, useInput } from 'ink';
 import Spinner from 'ink-spinner';
 import {
   VERSION,
+  type AgentDefinition,
   type Config,
   type Message,
   type SessionStore,
@@ -23,6 +24,7 @@ export interface AppProps {
   store: SessionStore;
   sessionId: string;
   resumedMessages: Message[];
+  definitions: Map<string, AgentDefinition>;
 }
 
 export function App({
@@ -31,6 +33,7 @@ export function App({
   store,
   sessionId,
   resumedMessages,
+  definitions,
 }: AppProps): React.JSX.Element {
   const { exit } = useApp();
   const runner = useAgentRunner(
@@ -39,6 +42,7 @@ export function App({
     store,
     sessionId,
     resumedMessages,
+    definitions,
   );
   const commandsRef = useRef(createCommandRegistry());
   const lastShellOutput = useRef<string | null>(null);
@@ -66,6 +70,7 @@ export function App({
             config,
             store,
             sessionId,
+            definitions,
             ui: { addInfo: runner.addInfo, clear: runner.clear, exit },
           };
           const result = await cmd.execute(args, ctx);
@@ -99,7 +104,7 @@ export function App({
         runner.submit(finalPrompt, value);
       })();
     },
-    [runner, exit, config, store, sessionId],
+    [runner, exit, config, store, sessionId, definitions],
   );
 
   const complete = useCallback(

@@ -1,6 +1,7 @@
 // packages/cli/src/commands/index.ts
 import { CommandRegistry } from './registry.js';
 import {
+  agentsCommand,
   clearCommand,
   helpCommand,
   modelCommand,
@@ -19,6 +20,7 @@ export function createCommandRegistry(): CommandRegistry {
   registry.register(modelCommand);
   registry.register(providerCommand);
   registry.register(resumeCommand);
+  registry.register(agentsCommand);
   registry.register(quitCommand);
   registry.register({ ...quitCommand, name: 'exit' });
   return registry;

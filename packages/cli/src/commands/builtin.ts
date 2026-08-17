@@ -90,3 +90,15 @@ export const resumeCommand: SlashCommand = {
     );
   },
 };
+
+export const agentsCommand: SlashCommand = {
+  name: 'agents',
+  description: 'List available sub-agent types.',
+  async execute(_args, ctx) {
+    const lines = [...ctx.definitions.values()].map(
+      (d) =>
+        `${d.name.padEnd(16)} ${d.description}\n${''.padEnd(16)} tools: ${(d.tools ?? ['(read-only defaults)']).join(', ')} · maxTurns: ${d.maxTurns ?? 10}`,
+    );
+    ctx.ui.addInfo(['Sub-agent types:', ...lines, '', 'Define more in .minicode\agents\*.md'].join('\n'));
+  },
+};

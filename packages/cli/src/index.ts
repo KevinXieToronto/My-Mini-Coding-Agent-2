@@ -1,7 +1,14 @@
 // packages/cli/src/index.ts
 import { createElement } from 'react';
 import { render } from 'ink';
-import { Config, loadMemory, SessionStore, type Message } from '@minicode/core';
+import {
+  Config,
+  loadAgentDefinitions,
+  loadMemory,
+  SessionStore,
+  type AgentDefinition,
+  type Message,
+} from '@minicode/core';
 import { parseArgs } from './args.js';
 import { App } from './ui/App.js';
 
@@ -10,6 +17,7 @@ const args = await parseArgs();
 let config: Config;
 let memory = '';
 let resumedMessages: Message[] = [];
+let definitions: Map<string, AgentDefinition> = new Map();
 const store = new SessionStore(process.cwd());
 let sessionId: string;
 
@@ -18,6 +26,7 @@ try {
   config.createProvider(); // fail fast
 
   memory = await loadMemory(process.cwd());
+  definitions = await loadAgentDefinitions(process.cwd());
 
   if (args.resume !== undefined) {
     const id =
@@ -39,5 +48,12 @@ try {
 }
 
 render(
-  createElement(App, { config, memory, store, sessionId, resumedMessages }),
+  createElement(App, {
+    config,
+    memory,
+    store,
+    sessionId,
+    resumedMessages,
+    definitions,
+  }),
 );
