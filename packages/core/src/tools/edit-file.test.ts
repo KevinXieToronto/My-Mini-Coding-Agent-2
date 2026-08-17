@@ -45,4 +45,17 @@ describe('edit_file', () => {
     expect(result.isError).toBe(true);
     expect(result.llmContent).toContain('not found');
   });
+
+  it('previews the change as a unified diff without applying it', async () => {
+    const file = path.join(dir, 'a.txt');
+    await fs.writeFile(file, 'line one\nline two\n', 'utf8');
+    const diff = await editFileTool.preview!(
+      { path: 'a.txt', old_string: 'line two', new_string: 'line 2' },
+      { cwd: dir },
+    );
+    expect(diff).toContain('-line two');
+    expect(diff).toContain('+line 2');
+    // preview must not modify the file
+    expect(await fs.readFile(file, 'utf8')).toBe('line one\nline two\n');
+  });
 });

@@ -10,3 +10,6 @@ export * from './tools/index.js';
 export type { AgentEvent } from './agent/events.js';
 export { Agent } from './agent/agent.js';
 export type { AgentOptions } from './agent/agent.js';
+
+export * from './permissions/types.js';
+export { PermissionManager } from './permissions/manager.js';

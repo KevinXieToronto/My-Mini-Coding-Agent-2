@@ -1,8 +1,10 @@
 // packages/core/src/agent/agent.ts
 import type { Message, ModelProvider, ToolCallRequest } from '../provider/types.js';
 import { buildSystemPrompt } from '../prompts.js';
+import { PermissionManager } from '../permissions/manager.js';
+import type { ConfirmationRequest, ConfirmFn } from '../permissions/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
-import type { ToolResult } from '../tools/types.js';
+import type { Tool, ToolResult } from '../tools/types.js';
 import type { AgentEvent } from './events.js';
 
 export interface AgentOptions {
@@ -12,14 +14,19 @@ export interface AgentOptions {
   cwd: string;
   /** Safety bound: max model round-trips per user input. */
   maxTurns?: number;
+  permissions?: PermissionManager;
+  /** Injected by the frontend. If absent while permissions require it, calls are denied. */
+  confirm?: ConfirmFn;
 }
 
 export class Agent {
   readonly history: Message[] = [];
+  readonly permissions: PermissionManager;
   private opts: Required<Pick<AgentOptions, 'maxTurns'>> & AgentOptions;
 
   constructor(options: AgentOptions) {
     this.opts = { maxTurns: 20, ...options };
+    this.permissions = options.permissions ?? new PermissionManager('ask');
     this.history.push({
       role: 'system',
       content: buildSystemPrompt(options.cwd),
@@ -61,13 +68,11 @@ export class Agent {
         ...(toolCalls.length > 0 ? { toolCalls } : {}),
       });
 
-      // No tool calls -> the model is done with this user input.
       if (toolCalls.length === 0) {
         yield { type: 'turn_end' };
         return;
       }
 
-      // Execute each requested call and append results to history.
       for (const call of toolCalls) {
         yield { type: 'tool_start', call };
         const result = await this.executeCall(call);
@@ -78,7 +83,6 @@ export class Agent {
           content: result.llmContent,
         });
       }
-      // Loop: send the tool results back to the model.
     }
 
     yield {
@@ -109,6 +113,23 @@ export class Agent {
       };
     }
 
+    // ---- permission gate -------------------------------------------------
+    if (this.permissions.shouldConfirm(tool)) {
+      const outcome = await this.requestConfirmation(tool, args);
+      if (outcome === 'no') {
+        return {
+          llmContent:
+            'The user denied this tool call. Ask them how to proceed ' +
+            'instead of retrying the same call.',
+          isError: true,
+        };
+      }
+      if (outcome === 'yes-always') {
+        this.permissions.allowAlways(tool.name);
+      }
+    }
+    // ----------------------------------------------------------------------
+
     try {
       return await tool.execute(args, { cwd: this.opts.cwd });
     } catch (err) {
@@ -120,4 +141,33 @@ export class Agent {
       };
     }
   }
+
+  private async requestConfirmation(
+    tool: Tool,
+    args: Record<string, unknown>,
+  ): Promise<'yes' | 'yes-always' | 'no'> {
+    if (!this.opts.confirm) return 'no'; // no UI to ask -> fail safe
+
+    const req: ConfirmationRequest = {
+      tool: tool.name,
+      kind: tool.kind,
+      summary: summarize(tool.name, args),
+    };
+    if (tool.kind === 'execute' && typeof args['command'] === 'string') {
+      req.command = args['command'];
+    }
+    if (tool.preview) {
+      try {
+        req.diff = await tool.preview(args, { cwd: this.opts.cwd });
+      } catch {
+        // Preview failure must not block the flow; the summary still shows.
+      }
+    }
+    return this.opts.confirm(req);
+  }
+}
+
+function summarize(name: string, args: Record<string, unknown>): string {
+  const target = args['path'] ?? args['command'] ?? '';
+  return `${name} ${String(target)}`.trim();
 }
