@@ -1,10 +1,10 @@
 // packages/cli/src/index.ts
 import * as readline from 'node:readline/promises';
 import {
-  buildSystemPrompt,
+  Agent,
+  createDefaultRegistry,
   OpenAIProvider,
   VERSION,
-  type Message,
 } from '@minicode/core';
 
 function envConfig(): { apiKey: string; baseUrl?: string; model: string } {
@@ -24,17 +24,16 @@ function envConfig(): { apiKey: string; baseUrl?: string; model: string } {
 
 async function main(): Promise<void> {
   const cfg = envConfig();
-  const provider = new OpenAIProvider({
-    apiKey: cfg.apiKey,
-    baseUrl: cfg.baseUrl,
+  const agent = new Agent({
+    provider: new OpenAIProvider({ apiKey: cfg.apiKey, baseUrl: cfg.baseUrl }),
+    model: cfg.model,
+    tools: createDefaultRegistry(),
+    cwd: process.cwd(),
   });
 
-  const history: Message[] = [
-    { role: 'system', content: buildSystemPrompt(process.cwd()) },
-  ];
-
   console.log(`Mini Code v${VERSION} — model: ${cfg.model}`);
-  console.log('Type your message. "exit" quits.\n');
+  console.log(`cwd: ${process.cwd()}`);
+  console.log('The agent can read/write files and run commands here. "exit" quits.\n');
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -46,27 +45,42 @@ async function main(): Promise<void> {
     if (!input) continue;
     if (input === 'exit' || input === 'quit') break;
 
-    history.push({ role: 'user', content: input });
-
-    process.stdout.write('minicode › ');
-    let assistantText = '';
-    try {
-      for await (const event of provider.chat(history, { model: cfg.model })) {
-        if (event.type === 'text') {
-          assistantText += event.text;
+    let streaming = false;
+    for await (const event of agent.run(input)) {
+      switch (event.type) {
+        case 'text':
+          if (!streaming) {
+            process.stdout.write('minicode › ');
+            streaming = true;
+          }
           process.stdout.write(event.text);
+          break;
+        case 'tool_start': {
+          if (streaming) {
+            process.stdout.write('\n');
+            streaming = false;
+          }
+          console.log(`  ⚙ ${event.call.name} ${event.call.arguments}`);
+          break;
         }
+        case 'tool_end': {
+          const label = event.result.displayText ?? event.call.name;
+          console.log(
+            event.result.isError ? `  ✗ ${label}` : `  ✓ ${label}`,
+          );
+          break;
+        }
+        case 'error':
+          if (streaming) process.stdout.write('\n');
+          console.error(`[error] ${event.message}`);
+          streaming = false;
+          break;
+        case 'turn_end':
+          break;
       }
-      process.stdout.write('\n\n');
-      history.push({ role: 'assistant', content: assistantText });
-    } catch (err) {
-      process.stdout.write('\n');
-      console.error(
-        `[error] ${err instanceof Error ? err.message : String(err)}\n`,
-      );
-      // Drop the failed user turn so history stays consistent.
-      history.pop();
     }
+    if (streaming) process.stdout.write('\n');
+    console.log();
   }
 
   rl.close();
