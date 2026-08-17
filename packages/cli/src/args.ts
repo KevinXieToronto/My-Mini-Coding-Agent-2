@@ -3,16 +3,31 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import type { ApprovalMode } from '@minicode/core';
 
+export type OutputFormat = 'text' | 'json' | 'stream-json';
+
 export interface CliArgs {
   model?: string;
   provider?: string;
   approvalMode: ApprovalMode;
   resume?: string;
+  /** Headless: run this prompt and exit. */
+  prompt?: string;
+  outputFormat: OutputFormat;
+  /** Daemon mode. */
+  serve: boolean;
+  port: number;
 }
 
 export async function parseArgs(): Promise<CliArgs> {
   const argv = await yargs(hideBin(process.argv))
     .scriptName('minicode')
+    .command('serve', 'Run the HTTP daemon (REST + SSE)', (y) =>
+      y.option('port', {
+        type: 'number',
+        default: 8787,
+        describe: 'Port to listen on',
+      }),
+    )
     .option('model', {
       type: 'string',
       describe: 'Model name (overrides settings)',
@@ -35,6 +50,16 @@ export async function parseArgs(): Promise<CliArgs> {
       type: 'string',
       describe: 'Resume a session: --resume <id> or --resume latest',
     })
+    .option('prompt', {
+      alias: 'p',
+      type: 'string',
+      describe: 'Run one prompt non-interactively and exit',
+    })
+    .option('output-format', {
+      choices: ['text', 'json', 'stream-json'] as const,
+      default: 'text' as const,
+      describe: 'Headless output format',
+    })
     .help()
     .parse();
 
@@ -43,5 +68,9 @@ export async function parseArgs(): Promise<CliArgs> {
     provider: argv.provider,
     approvalMode: argv.yolo ? 'yolo' : (argv['approval-mode'] as ApprovalMode),
     resume: argv.resume,
+    prompt: argv.prompt,
+    outputFormat: argv['output-format'] as OutputFormat,
+    serve: argv._.includes('serve'),
+    port: (argv as { port?: number }).port ?? 8787,
   };
 }

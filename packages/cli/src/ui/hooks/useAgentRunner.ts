@@ -2,18 +2,12 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   Agent,
-  Config,
-  createDefaultRegistry,
-  createSpawnAgentTool,
-  HookRunner,
-  McpManager,
-  PermissionManager,
-  type AgentDefinition,
   type ConfirmationRequest,
   type ConfirmOutcome,
   type Message,
   type SessionStore,
 } from '@minicode/core';
+import { buildAgent, type Bootstrap } from '../../bootstrap.js';
 import { nextId, type UIMessage } from '../types.js';
 
 export interface AgentRunner {
@@ -28,13 +22,10 @@ export interface AgentRunner {
 }
 
 export function useAgentRunner(
-  config: Config,
-  memory: string,
+  boot: Bootstrap,
   store: SessionStore,
   sessionId: string,
   resumedMessages: Message[],
-  definitions: Map<string, AgentDefinition>,
-  mcpManagers: McpManager[],
 ): AgentRunner {
   const [messages, setMessages] = useState<UIMessage[]>(() =>
     resumedMessages
@@ -53,29 +44,9 @@ export function useAgentRunner(
   // Create the agent exactly once, lazily, inside a ref.
   const agentRef = useRef<Agent | null>(null);
   if (agentRef.current === null) {
-    const { provider, model } = config.createProvider();
-    const tools = createDefaultRegistry();
-    tools.register(
-      createSpawnAgentTool({
-        providerFactory: () => config.createProvider(),
-        baseTools: tools,
-        definitions,
-      }),
-    );
-    // Before the Agent exists, so MCP tools ride along in every tools.schemas().
-    for (const manager of mcpManagers) {
-      for (const tool of manager.tools()) {
-        tools.register(tool);
-      }
-    }
-    const agent = new Agent({
-      provider,
-      model,
-      tools,
-      cwd: config.cwd,
-      permissions: new PermissionManager(config.approvalMode),
-      hooks: new HookRunner(config.hooks, config.cwd),
-      memory,
+    agentRef.current = buildAgent({
+      boot,
+      resumedMessages,
       onMessage: (m) => void store.append(sessionId, m),
       // The ConfirmFn: park a promise, surface the request as state,
       // resolve when the dialog answers.
@@ -85,8 +56,6 @@ export function useAgentRunner(
           setPendingConfirm(req);
         }),
     });
-    agent.loadHistory(resumedMessages);
-    agentRef.current = agent;
   }
 
   const respondConfirm = useCallback((outcome: ConfirmOutcome) => {

@@ -4,13 +4,10 @@ import { Box, Text, useApp, useInput } from 'ink';
 import Spinner from 'ink-spinner';
 import {
   VERSION,
-  type AgentDefinition,
-  type Config,
-  type McpManager,
   type Message,
   type SessionStore,
-  type SkillDefinition,
 } from '@minicode/core';
+import type { Bootstrap } from '../bootstrap.js';
 import { createCommandRegistry, type CommandContext } from '../commands/index.js';
 import { expandAtFiles } from '../input/atFile.js';
 import { completeAtToken } from '../input/completion.js';
@@ -21,38 +18,21 @@ import { MessageList } from './components/MessageList.js';
 import { useAgentRunner } from './hooks/useAgentRunner.js';
 
 export interface AppProps {
-  config: Config;
-  memory: string;
+  boot: Bootstrap;
   store: SessionStore;
   sessionId: string;
   resumedMessages: Message[];
-  definitions: Map<string, AgentDefinition>;
-  skills: SkillDefinition[];
-  mcpManagers: McpManager[];
-  mcpErrors: string[];
 }
 
 export function App({
-  config,
-  memory,
+  boot,
   store,
   sessionId,
   resumedMessages,
-  definitions,
-  skills,
-  mcpManagers,
-  mcpErrors,
 }: AppProps): React.JSX.Element {
+  const { config, definitions, skills, mcpManagers, mcpErrors } = boot;
   const { exit } = useApp();
-  const runner = useAgentRunner(
-    config,
-    memory,
-    store,
-    sessionId,
-    resumedMessages,
-    definitions,
-    mcpManagers,
-  );
+  const runner = useAgentRunner(boot, store, sessionId, resumedMessages);
   const commandsRef = useRef(createCommandRegistry(skills));
   const lastShellOutput = useRef<string | null>(null);
 
