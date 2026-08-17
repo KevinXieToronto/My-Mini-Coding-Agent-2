@@ -1,0 +1,24 @@
+{
+  "provider": "dashscope",
+  "approvalMode": "ask",
+  "providers": {
+    "dashscope": {
+      "protocol": "openai",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiKeyEnv": "DASHSCOPE_API_KEY",
+      "model": "qwen3-coder-plus"
+    },
+    "ollama": {
+      "protocol": "openai",
+      "baseUrl": "http://localhost:11434/v1",
+      "apiKey": "ollama",
+      "model": "qwen3"
+    },
+    "vllm": {
+      "protocol": "openai",
+      "baseUrl": "http://localhost:8000/v1",
+      "apiKey": "vllm",
+      "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct"
+    }
+  }
+}

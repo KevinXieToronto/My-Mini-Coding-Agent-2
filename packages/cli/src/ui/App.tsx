@@ -2,7 +2,7 @@
 import { useCallback, useRef } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import Spinner from 'ink-spinner';
-import { VERSION } from '@minicode/core';
+import { VERSION, type Config } from '@minicode/core';
 import { createCommandRegistry, type CommandContext } from '../commands/index.js';
 import { expandAtFiles } from '../input/atFile.js';
 import { completeAtToken } from '../input/completion.js';
@@ -10,9 +10,9 @@ import { runShellPassthrough } from '../input/shellPassthrough.js';
 import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { InputBox } from './components/InputBox.js';
 import { MessageList } from './components/MessageList.js';
-import { useAgentRunner, type RunnerConfig } from './hooks/useAgentRunner.js';
+import { useAgentRunner } from './hooks/useAgentRunner.js';
 
-export function App({ config }: { config: RunnerConfig }): React.JSX.Element {
+export function App({ config }: { config: Config }): React.JSX.Element {
   const { exit } = useApp();
   const runner = useAgentRunner(config);
   const commandsRef = useRef(createCommandRegistry());
@@ -38,6 +38,7 @@ export function App({ config }: { config: RunnerConfig }): React.JSX.Element {
           const ctx: CommandContext = {
             agent: runner.agent,
             commands: commandsRef.current,
+            config,
             ui: { addInfo: runner.addInfo, clear: runner.clear, exit },
           };
           const result = await cmd.execute(args, ctx);
@@ -97,7 +98,8 @@ export function App({ config }: { config: RunnerConfig }): React.JSX.Element {
           <Text color="green" bold>
             Mini Code
           </Text>{' '}
-          v{VERSION} · {config.model} · {config.approvalMode} · {config.cwd}
+          v{VERSION} · {runner.agent.model} · {config.approvalMode} ·{' '}
+          {config.cwd}
         </Text>
       </Box>
 

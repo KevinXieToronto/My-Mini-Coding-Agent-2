@@ -4,6 +4,7 @@ import {
   clearCommand,
   helpCommand,
   modelCommand,
+  providerCommand,
   quitCommand,
 } from './builtin.js';
 
@@ -15,6 +16,7 @@ export function createCommandRegistry(): CommandRegistry {
   registry.register(helpCommand);
   registry.register(clearCommand);
   registry.register(modelCommand);
+  registry.register(providerCommand);
   registry.register(quitCommand);
   registry.register({ ...quitCommand, name: 'exit' });
   return registry;

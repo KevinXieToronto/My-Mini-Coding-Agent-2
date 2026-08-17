@@ -45,3 +45,22 @@ export const quitCommand: SlashCommand = {
     ctx.ui.exit();
   },
 };
+
+export const providerCommand: SlashCommand = {
+  name: 'provider',
+  description: 'List profiles or switch: /provider [name]',
+  async execute(args, ctx) {
+    const name = args.trim();
+    if (name.length === 0) {
+      ctx.ui.addInfo(`Profiles: ${ctx.config.listProfiles().join(', ')}`);
+      return;
+    }
+    try {
+      const { provider, model, profileName } = ctx.config.createProvider(name);
+      ctx.agent.setProvider(provider, model);
+      ctx.ui.addInfo(`Switched to profile "${profileName}" (model: ${model})`);
+    } catch (err) {
+      ctx.ui.addInfo(`${err instanceof Error ? err.message : err}`);
+    }
+  },
+};

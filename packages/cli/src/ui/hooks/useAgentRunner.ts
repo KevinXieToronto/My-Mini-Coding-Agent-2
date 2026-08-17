@@ -2,22 +2,13 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   Agent,
+  Config,
   createDefaultRegistry,
-  OpenAIProvider,
   PermissionManager,
-  type ApprovalMode,
   type ConfirmationRequest,
   type ConfirmOutcome,
 } from '@minicode/core';
 import { nextId, type UIMessage } from '../types.js';
-
-export interface RunnerConfig {
-  apiKey: string;
-  baseUrl?: string;
-  model: string;
-  approvalMode: ApprovalMode;
-  cwd: string;
-}
 
 export interface AgentRunner {
   agent: Agent;
@@ -30,7 +21,7 @@ export interface AgentRunner {
   clear(): void;
 }
 
-export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
+export function useAgentRunner(config: Config): AgentRunner {
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [running, setRunning] = useState(false);
   const [pendingConfirm, setPendingConfirm] =
@@ -40,15 +31,13 @@ export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
   // Create the agent exactly once, lazily, inside a ref.
   const agentRef = useRef<Agent | null>(null);
   if (agentRef.current === null) {
+    const { provider, model } = config.createProvider();
     agentRef.current = new Agent({
-      provider: new OpenAIProvider({
-        apiKey: cfg.apiKey,
-        baseUrl: cfg.baseUrl,
-      }),
-      model: cfg.model,
+      provider,
+      model,
       tools: createDefaultRegistry(),
-      cwd: cfg.cwd,
-      permissions: new PermissionManager(cfg.approvalMode),
+      cwd: config.cwd,
+      permissions: new PermissionManager(config.approvalMode),
       // The ConfirmFn: park a promise, surface the request as state,
       // resolve when the dialog answers.
       confirm: (req) =>

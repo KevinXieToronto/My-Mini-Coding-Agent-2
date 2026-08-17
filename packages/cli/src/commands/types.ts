@@ -1,10 +1,11 @@
 // packages/cli/src/commands/types.ts
-import type { Agent } from '@minicode/core';
+import type { Agent, Config } from '@minicode/core';
 import type { CommandRegistry } from './registry.js';
 
 export interface CommandContext {
   agent: Agent;
   commands: CommandRegistry;
+  config: Config;
   ui: {
     addInfo(text: string): void;
     clear(): void;

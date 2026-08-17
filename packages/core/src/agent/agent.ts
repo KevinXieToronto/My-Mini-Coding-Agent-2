@@ -41,6 +41,11 @@ export class Agent {
     this.opts.model = model;
   }
 
+  setProvider(provider: ModelProvider, model: string): void {
+    this.opts.provider = provider;
+    this.opts.model = model;
+  }
+
   /** Run one user input to completion, streaming events. */
   async *run(userInput: string): AsyncGenerator<AgentEvent> {
     this.history.push({ role: 'user', content: userInput });

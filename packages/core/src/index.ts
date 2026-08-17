@@ -13,3 +13,7 @@ export type { AgentOptions } from './agent/agent.js';
 
 export * from './permissions/types.js';
 export { PermissionManager } from './permissions/manager.js';
+
+export * from './config/settings.js';
+export { Config } from './config/config.js';
+export type { CliOverrides } from './config/config.js';
