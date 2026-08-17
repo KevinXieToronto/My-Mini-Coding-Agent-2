@@ -13,7 +13,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "bundle": "node esbuild.config.js",
-    "dev": "npm run build -w @minicode/core && tsx packages/cli/src/index.ts",
+    "dev": "npm run build -w @minicode/core && tsx --tsconfig packages/cli/tsconfig.json packages/cli/src/index.ts",
     "test": "vitest run",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint packages/*/src",

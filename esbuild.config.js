@@ -8,6 +8,8 @@ await esbuild.build({
   platform: 'node',
   format: 'esm',
   target: 'node22',
+  // The Ink UI uses JSX; compile it with React's automatic runtime.
+  jsx: 'automatic',
   sourcemap: true,
   banner: {
     js: [
