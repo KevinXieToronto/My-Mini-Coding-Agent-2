@@ -1,0 +1,32 @@
+{
+  "name": "minicode",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mini Code — a miniature terminal AI coding agent, built from scratch",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "bundle": "node esbuild.config.js",
+    "dev": "npm run build -w @minicode/core && tsx packages/cli/src/index.ts",
+    "test": "vitest run",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint packages/*/src",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.8.0",
+    "vitest": "^2.1.0"
+  }
+}
