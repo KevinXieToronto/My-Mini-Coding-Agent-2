@@ -2,6 +2,7 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { ApprovalMode } from '../permissions/types.js';
+import type { HooksConfig } from '../hooks/types.js';
 import { OpenAIProvider } from '../provider/openai.js';
 import type { ModelProvider } from '../provider/types.js';
 import {
@@ -71,6 +72,10 @@ export class Config {
 
   get approvalMode(): ApprovalMode {
     return this.settings.approvalMode ?? 'ask';
+  }
+
+  get hooks(): HooksConfig {
+    return this.settings.hooks ?? {};
   }
 
   listProfiles(): string[] {

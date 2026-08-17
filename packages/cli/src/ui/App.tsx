@@ -8,6 +8,7 @@ import {
   type Config,
   type Message,
   type SessionStore,
+  type SkillDefinition,
 } from '@minicode/core';
 import { createCommandRegistry, type CommandContext } from '../commands/index.js';
 import { expandAtFiles } from '../input/atFile.js';
@@ -25,6 +26,7 @@ export interface AppProps {
   sessionId: string;
   resumedMessages: Message[];
   definitions: Map<string, AgentDefinition>;
+  skills: SkillDefinition[];
 }
 
 export function App({
@@ -34,6 +36,7 @@ export function App({
   sessionId,
   resumedMessages,
   definitions,
+  skills,
 }: AppProps): React.JSX.Element {
   const { exit } = useApp();
   const runner = useAgentRunner(
@@ -44,7 +47,7 @@ export function App({
     resumedMessages,
     definitions,
   );
-  const commandsRef = useRef(createCommandRegistry());
+  const commandsRef = useRef(createCommandRegistry(skills));
   const lastShellOutput = useRef<string | null>(null);
 
   useInput((input, key) => {

@@ -27,3 +27,7 @@ export * from './subagents/definition.js';
 export { loadAgentDefinitions, parseFrontmatterDoc } from './subagents/loader.js';
 export { createSpawnAgentTool } from './subagents/spawn-tool.js';
 export type { SpawnAgentDeps } from './subagents/spawn-tool.js';
+
+export * from './skills/loader.js';
+export * from './hooks/types.js';
+export { HookRunner } from './hooks/runner.js';

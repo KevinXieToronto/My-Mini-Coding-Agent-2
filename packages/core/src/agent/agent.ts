@@ -11,6 +11,7 @@ import { compressHistory, estimateTokens } from '../session/compress.js';
 import type { ToolRegistry } from '../tools/registry.js';
 import type { Tool, ToolResult } from '../tools/types.js';
 import type { AgentEvent } from './events.js';
+import type { HookRunner } from '../hooks/runner.js';
 
 export interface AgentOptions {
   provider: ModelProvider;
@@ -30,6 +31,7 @@ export interface AgentOptions {
   compressThreshold?: number;
   /** Override the default system prompt (used by subagents). */
   systemPrompt?: string;
+  hooks?: HookRunner;
 }
 
 export class Agent {
@@ -136,6 +138,13 @@ export class Agent {
       });
 
       if (toolCalls.length === 0) {
+        if (this.opts.hooks?.hasHooks('stop')) {
+          const stop = await this.opts.hooks.run('stop', {
+            tool: '',
+            cwd: this.opts.cwd,
+          });
+          if (stop.message) yield { type: 'info', message: stop.message };
+        }
         yield { type: 'turn_end' };
         return;
       }
@@ -180,6 +189,22 @@ export class Agent {
       };
     }
 
+    // ---- preToolUse hooks ------------------------------------------------
+    if (this.opts.hooks) {
+      const pre = await this.opts.hooks.run('preToolUse', {
+        tool: call.name,
+        args,
+        cwd: this.opts.cwd,
+      });
+      if (pre.blocked) {
+        return {
+          llmContent: `Tool call blocked by a user-configured hook: ${pre.message}`,
+          isError: true,
+        };
+      }
+    }
+    // ----------------------------------------------------------------------
+
     if (this.permissions.shouldConfirm(tool)) {
       const outcome = await this.requestConfirmation(tool, args);
       if (outcome === 'no') {
@@ -196,7 +221,19 @@ export class Agent {
     }
 
     try {
-      return await tool.execute(args, { cwd: this.opts.cwd });
+      const result = await tool.execute(args, { cwd: this.opts.cwd });
+      if (this.opts.hooks) {
+        const post = await this.opts.hooks.run('postToolUse', {
+          tool: call.name,
+          args,
+          isError: result.isError ?? false,
+          cwd: this.opts.cwd,
+        });
+        if (post.message) {
+          result.llmContent += `\n[hook note] ${post.message}`;
+        }
+      }
+      return result;
     } catch (err) {
       return {
         llmContent: `Tool ${call.name} failed: ${

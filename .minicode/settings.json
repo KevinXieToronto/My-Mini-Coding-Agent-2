@@ -20,5 +20,10 @@
       "apiKey": "vllm",
       "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct"
     }
+  },
+  "hooks": {
+    "preToolUse": [
+      { "matcher": "run_shell", "command": "node .minicode/hooks/guard.js" }
+    ]
   }
 }

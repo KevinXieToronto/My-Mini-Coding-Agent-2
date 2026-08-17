@@ -5,9 +5,11 @@ import {
   Config,
   loadAgentDefinitions,
   loadMemory,
+  loadSkills,
   SessionStore,
   type AgentDefinition,
   type Message,
+  type SkillDefinition,
 } from '@minicode/core';
 import { parseArgs } from './args.js';
 import { App } from './ui/App.js';
@@ -18,6 +20,7 @@ let config: Config;
 let memory = '';
 let resumedMessages: Message[] = [];
 let definitions: Map<string, AgentDefinition> = new Map();
+let skills: SkillDefinition[] = [];
 const store = new SessionStore(process.cwd());
 let sessionId: string;
 
@@ -27,6 +30,7 @@ try {
 
   memory = await loadMemory(process.cwd());
   definitions = await loadAgentDefinitions(process.cwd());
+  skills = await loadSkills(process.cwd());
 
   if (args.resume !== undefined) {
     const id =
@@ -55,5 +59,6 @@ render(
     sessionId,
     resumedMessages,
     definitions,
+    skills,
   }),
 );
