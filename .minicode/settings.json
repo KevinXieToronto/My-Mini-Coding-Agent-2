@@ -21,6 +21,12 @@
       "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct"
     }
   },
+  "mcpServers": {
+    "everything": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-everything"]
+    }
+  },
   "hooks": {
     "preToolUse": [
       { "matcher": "run_shell", "command": "node .minicode/hooks/guard.js" }

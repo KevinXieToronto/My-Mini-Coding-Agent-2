@@ -6,6 +6,7 @@ import {
   createDefaultRegistry,
   createSpawnAgentTool,
   HookRunner,
+  McpManager,
   PermissionManager,
   type AgentDefinition,
   type ConfirmationRequest,
@@ -33,6 +34,7 @@ export function useAgentRunner(
   sessionId: string,
   resumedMessages: Message[],
   definitions: Map<string, AgentDefinition>,
+  mcpManagers: McpManager[],
 ): AgentRunner {
   const [messages, setMessages] = useState<UIMessage[]>(() =>
     resumedMessages
@@ -60,6 +62,12 @@ export function useAgentRunner(
         definitions,
       }),
     );
+    // Before the Agent exists, so MCP tools ride along in every tools.schemas().
+    for (const manager of mcpManagers) {
+      for (const tool of manager.tools()) {
+        tools.register(tool);
+      }
+    }
     const agent = new Agent({
       provider,
       model,

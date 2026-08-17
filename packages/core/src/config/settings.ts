@@ -2,6 +2,7 @@
 import * as fs from 'node:fs/promises';
 import type { ApprovalMode } from '../permissions/types.js';
 import type { HooksConfig } from '../hooks/types.js';
+import type { McpServerConfig } from '../mcp/types.js';
 
 /** One way of reaching a model. All profiles here speak the OpenAI protocol. */
 export interface ProviderProfile {
@@ -23,6 +24,7 @@ export interface Settings {
   approvalMode?: ApprovalMode;
   providers?: Record<string, ProviderProfile>;
   hooks?: HooksConfig;
+  mcpServers?: Record<string, McpServerConfig>;
 }
 
 /** Read one settings.json; missing file → {}, malformed file → loud error. */
@@ -53,6 +55,9 @@ export function mergeSettings(...layers: Settings[]): Settings {
     if (layer.hooks !== undefined) result.hooks = layer.hooks;
     if (layer.providers) {
       result.providers = { ...result.providers, ...layer.providers };
+    }
+    if (layer.mcpServers) {
+      result.mcpServers = { ...result.mcpServers, ...layer.mcpServers };
     }
   }
   return result;

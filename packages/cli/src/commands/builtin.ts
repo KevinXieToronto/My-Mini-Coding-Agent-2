@@ -102,3 +102,24 @@ export const agentsCommand: SlashCommand = {
     ctx.ui.addInfo(['Sub-agent types:', ...lines, '', 'Define more in .minicode\agents\*.md'].join('\n'));
   },
 };
+
+export const mcpCommand: SlashCommand = {
+  name: 'mcp',
+  description: 'List connected MCP servers and their tools.',
+  async execute(_args, ctx) {
+    if (ctx.mcpManagers.length === 0) {
+      ctx.ui.addInfo(
+        'No MCP servers connected. Add them under "mcpServers" in .minicode\settings.json.',
+      );
+      return;
+    }
+    const lines: string[] = [];
+    for (const m of ctx.mcpManagers) {
+      lines.push(`${m.name} — ${m.tools().length} tool(s):`);
+      for (const t of m.tools()) {
+        lines.push(`  ${t.name}`);
+      }
+    }
+    ctx.ui.addInfo(lines.join('\n'));
+  },
+};

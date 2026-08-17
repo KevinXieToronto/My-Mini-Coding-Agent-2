@@ -6,6 +6,7 @@ import {
   agentsCommand,
   clearCommand,
   helpCommand,
+  mcpCommand,
   modelCommand,
   providerCommand,
   quitCommand,
@@ -25,6 +26,7 @@ export function createCommandRegistry(
   registry.register(providerCommand);
   registry.register(resumeCommand);
   registry.register(agentsCommand);
+  registry.register(mcpCommand);
   registry.register(quitCommand);
   registry.register({ ...quitCommand, name: 'exit' });
 

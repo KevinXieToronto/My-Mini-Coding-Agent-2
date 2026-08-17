@@ -3,6 +3,7 @@ import type {
   Agent,
   AgentDefinition,
   Config,
+  McpManager,
   SessionStore,
 } from '@minicode/core';
 import type { CommandRegistry } from './registry.js';
@@ -14,6 +15,7 @@ export interface CommandContext {
   store: SessionStore;
   sessionId: string;
   definitions: Map<string, AgentDefinition>;
+  mcpManagers: McpManager[];
   ui: {
     addInfo(text: string): void;
     clear(): void;

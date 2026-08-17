@@ -1,11 +1,12 @@
 // packages/cli/src/ui/App.tsx
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import Spinner from 'ink-spinner';
 import {
   VERSION,
   type AgentDefinition,
   type Config,
+  type McpManager,
   type Message,
   type SessionStore,
   type SkillDefinition,
@@ -27,6 +28,8 @@ export interface AppProps {
   resumedMessages: Message[];
   definitions: Map<string, AgentDefinition>;
   skills: SkillDefinition[];
+  mcpManagers: McpManager[];
+  mcpErrors: string[];
 }
 
 export function App({
@@ -37,6 +40,8 @@ export function App({
   resumedMessages,
   definitions,
   skills,
+  mcpManagers,
+  mcpErrors,
 }: AppProps): React.JSX.Element {
   const { exit } = useApp();
   const runner = useAgentRunner(
@@ -46,6 +51,7 @@ export function App({
     sessionId,
     resumedMessages,
     definitions,
+    mcpManagers,
   );
   const commandsRef = useRef(createCommandRegistry(skills));
   const lastShellOutput = useRef<string | null>(null);
@@ -53,6 +59,11 @@ export function App({
   useInput((input, key) => {
     if (key.ctrl && input === 'c') exit();
   });
+
+  useEffect(() => {
+    for (const e of mcpErrors) runner.addInfo(e);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = useCallback(
     (value: string) => {
@@ -74,6 +85,7 @@ export function App({
             store,
             sessionId,
             definitions,
+            mcpManagers,
             ui: { addInfo: runner.addInfo, clear: runner.clear, exit },
           };
           const result = await cmd.execute(args, ctx);
@@ -107,7 +119,7 @@ export function App({
         runner.submit(finalPrompt, value);
       })();
     },
-    [runner, exit, config, store, sessionId, definitions],
+    [runner, exit, config, store, sessionId, definitions, mcpManagers],
   );
 
   const complete = useCallback(

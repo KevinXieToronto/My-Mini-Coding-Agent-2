@@ -31,3 +31,6 @@ export type { SpawnAgentDeps } from './subagents/spawn-tool.js';
 export * from './skills/loader.js';
 export * from './hooks/types.js';
 export { HookRunner } from './hooks/runner.js';
+
+export type { McpServerConfig } from './mcp/types.js';
+export { McpManager } from './mcp/manager.js';

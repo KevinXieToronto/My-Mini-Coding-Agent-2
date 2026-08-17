@@ -6,6 +6,7 @@ import {
   loadAgentDefinitions,
   loadMemory,
   loadSkills,
+  McpManager,
   SessionStore,
   type AgentDefinition,
   type Message,
@@ -21,6 +22,8 @@ let memory = '';
 let resumedMessages: Message[] = [];
 let definitions: Map<string, AgentDefinition> = new Map();
 let skills: SkillDefinition[] = [];
+const mcpManagers: McpManager[] = [];
+const mcpErrors: string[] = [];
 const store = new SessionStore(process.cwd());
 let sessionId: string;
 
@@ -31,6 +34,17 @@ try {
   memory = await loadMemory(process.cwd());
   definitions = await loadAgentDefinitions(process.cwd());
   skills = await loadSkills(process.cwd());
+
+  // A dead server must never take the CLI down — the native tools still work.
+  for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
+    try {
+      mcpManagers.push(await McpManager.connect(name, serverConfig));
+    } catch (err) {
+      mcpErrors.push(
+        `MCP server "${name}" failed to connect: ${err instanceof Error ? err.message : err}`,
+      );
+    }
+  }
 
   if (args.resume !== undefined) {
     const id =
@@ -60,5 +74,7 @@ render(
     resumedMessages,
     definitions,
     skills,
+    mcpManagers,
+    mcpErrors,
   }),
 );
