@@ -20,12 +20,14 @@ export interface RunnerConfig {
 }
 
 export interface AgentRunner {
+  agent: Agent;
   messages: UIMessage[];
   running: boolean;
   pendingConfirm: ConfirmationRequest | null;
-  submit(input: string): void;
+  submit(prompt: string, display?: string): void;
   respondConfirm(outcome: ConfirmOutcome): void;
   addInfo(text: string): void;
+  clear(): void;
 }
 
 export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
@@ -67,10 +69,14 @@ export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
     setMessages((prev) => [...prev, { id: nextId(), role: 'info', text }]);
   }, []);
 
-  const submit = useCallback((input: string) => {
+  const clear = useCallback(() => {
+    setMessages([]);
+  }, []);
+
+  const submit = useCallback((prompt: string, display?: string) => {
     setMessages((prev) => [
       ...prev,
-      { id: nextId(), role: 'user', text: input },
+      { id: nextId(), role: 'user', text: display ?? prompt },
     ]);
     setRunning(true);
 
@@ -79,7 +85,7 @@ export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
       if (!agent) return;
       let assistantId: string | null = null;
 
-      for await (const event of agent.run(input)) {
+      for await (const event of agent.run(prompt)) {
         switch (event.type) {
           case 'text': {
             if (assistantId === null) {
@@ -100,7 +106,7 @@ export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
             break;
           }
           case 'tool_start': {
-            assistantId = null; // next text starts a fresh bubble
+            assistantId = null;
             setMessages((prev) => [
               ...prev,
               {
@@ -114,8 +120,7 @@ export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
             break;
           }
           case 'tool_end': {
-            const label =
-              event.result.displayText ?? event.call.name;
+            const label = event.result.displayText ?? event.call.name;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === event.call.id
@@ -145,5 +150,14 @@ export function useAgentRunner(cfg: RunnerConfig): AgentRunner {
     })();
   }, []);
 
-  return { messages, running, pendingConfirm, submit, respondConfirm, addInfo };
+  return {
+    agent: agentRef.current,
+    messages,
+    running,
+    pendingConfirm,
+    submit,
+    respondConfirm,
+    addInfo,
+    clear,
+  };
 }

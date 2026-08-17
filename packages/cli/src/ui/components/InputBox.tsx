@@ -5,9 +5,11 @@ import { Box, Text, useInput } from 'ink';
 interface Props {
   active: boolean;
   onSubmit(value: string): void;
+  /** Return a replacement for the whole input line, or null for no-op. */
+  complete?(value: string): Promise<string | null>;
 }
 
-export function InputBox({ active, onSubmit }: Props): React.JSX.Element {
+export function InputBox({ active, onSubmit, complete }: Props): React.JSX.Element {
   const [value, setValue] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [histIndex, setHistIndex] = useState(-1); // -1 = live line
@@ -21,6 +23,14 @@ export function InputBox({ active, onSubmit }: Props): React.JSX.Element {
         setHistIndex(-1);
         setValue('');
         onSubmit(trimmed);
+        return;
+      }
+      if (key.tab) {
+        if (complete) {
+          void complete(value).then((next) => {
+            if (next !== null) setValue(next);
+          });
+        }
         return;
       }
       if (key.upArrow) {
@@ -47,7 +57,7 @@ export function InputBox({ active, onSubmit }: Props): React.JSX.Element {
         setValue((v) => v.slice(0, -1));
         return;
       }
-      if (key.ctrl || key.meta || key.escape || key.tab) return;
+      if (key.ctrl || key.meta || key.escape) return;
       setValue((v) => v + input);
     },
     { isActive: active },
