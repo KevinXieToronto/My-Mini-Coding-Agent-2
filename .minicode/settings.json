@@ -1,5 +1,5 @@
 {
-  "provider": "dashscope",
+  "provider": "default",
   "approvalMode": "ask",
   "providers": {
     "dashscope": {
